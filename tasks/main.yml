@@ -1,0 +1,39 @@
+---
+- name: Install needed packages
+  apt: pkg={{ item }} state=present
+  with_items:
+  - openjdk-7-jdk
+  - git
+  - maven
+  when: ansible_lsb.id == "Ubuntu" or ansible_lsb.id == "Debian"
+
+- name: Install needed packages
+  xbps: name={{ item }} state=present
+  with_items:
+  - openjdk
+  - git
+  - apache-maven-bin
+  when: ansible_lsb.id == "Void"
+
+- name: Create the minecraft user
+  user: name=minecraft state=present system=yes
+
+- name: Make the build directory
+  file: path=/opt/spigot/build state=directory owner=minecraft group=minecraft mode=0755
+
+- name: Make the bin directory
+  file: path=/opt/spigot/bin state=directory owner=minecraft group=minecraft mode=0755
+
+- name: Get the spigot build tools
+  get_url: url={{ URL_BuildTools }} dest=/opt/spigot/build/BuildTools.jar owner=minecraft group=minecraft mode=0755
+
+- name: Build the Spigot Binary
+  command: java -jar /opt/spigot/build/BuildTools.jar --rev {{ spigot_version }}
+  args:
+    chdir: /opt/spigot/build
+    creates: /opt/spigot/build/spigot-{{ spigot_version }}.jar
+  sudo: yes
+  sudo_user: minecraft
+
+- name: Link build artifacts to bin/
+  file: src=../build/spigot-{{ spigot_version }}.jar dest=/opt/spigot/bin/spigot.jar state=link
